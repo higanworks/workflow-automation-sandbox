@@ -1,13 +1,13 @@
-name: Update Staging PR
+name: Update main PR
 
 on:
   pull_request:
     types: [closed]
     branches:
-      - dev
+      - staging
 
 jobs:
-  update-staging-pr:
+  update-main-pr:
     # プルリクエストがマージされた場合のみ実行
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
@@ -20,7 +20,7 @@ jobs:
       - uses: ./.github/actions/create_pr
         id: create_pr
         with:
-          base_branch: staging
-          head_branch: dev
+          base_branch: main
+          head_branch: staging
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_TITLE: "自動PR: dev から stagin へ更新"
+          PR_TITLE: "自動PR: staging から main へ更新"
