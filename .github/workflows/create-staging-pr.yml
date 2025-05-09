@@ -1,54 +1,46 @@
 name: Update Staging PR
 
 on:
-  pull_request:
-    types: [closed]
+  workflow_run:
+    workflows:
+      - Deployment to dev
     branches:
       - dev
+    types:
+      - completed
 
 jobs:
-  check-deploy-status:
-    if: github.event.pull_request.merged == true
-    runs-on: ubuntu-latest
-    outputs:
-      deploy_success: ${{ steps.check-deploy.outputs.success }}
-    steps:
-      - name: Check deploy action status
-        id: check-deploy
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          # deploy_actionの最新の実行結果を確認
-          # ここでは特定のワークフロー名とブランチを指定
-          deploy_status=$(gh run list --workflow=deployment-dev.yml --branch dev --limit 1 --json conclusion --jq '.[0].conclusion')
-          
-          echo "最新のdeploy_actionの状態: $deploy_status"
-          
-          if [ "$deploy_status" = "success" ]; then
-            echo "success=true" >> $GITHUB_OUTPUT
-            echo "デプロイは成功しています。PRの作成/更新を進めます。"
-          else
-            echo "success=false" >> $GITHUB_OUTPUT
-            echo "デプロイは成功していません。PRの作成/更新をスキップします。"
-          fi
- 
   update-staging-pr:
     # デプロイが成功していた場合のみ実行
-    needs: check-deploy-status
-    if: needs.check-deploy-status.outputs.deploy_success == 'true'
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
-    outputs:
-      deploy_success: ${{ steps.check-deploy.outputs.success }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0  # すべての履歴を取得（ブランチの比較に必要）
 
+      - name: Get PR information from deployment
+        id: pr-info
+        env:
+          GITHUB_TOKEN: ${{ inputs.GITHUB_TOKEN }}
+        run: |
+          # 元のワークフローを起動したPRの情報を取得
+          PR_NUMBER=$(gh api /repos/${{ github.repository }}/actions/runs/${{ github.event.workflow_run.id }}/attempts/latest -q '.pull_requests[0].number')
+          
+          if [ -n "$PR_NUMBER" ]; then
+            echo "元のデプロイを起動したPR番号: $PR_NUMBER"
+            echo "pr_number=$PR_NUMBER" >> $GITHUB_OUTPUT
+          else
+            echo "PRの情報が見つかりません。直接プッシュなどの可能性があります。"
+            echo "pr_number=unknown" >> $GITHUB_OUTPUT
+          fi
+
       - uses: ./.github/actions/create_pr
         id: create_pr
         with:
           base_branch: staging
           head_branch: dev
+          pr_number: ${{ steps.pr-info.outputs.pr_number }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_TITLE: "自動PR: dev から stagin へ更新"
+          PR_TITLE: "自動PR: dev から staging へ更新"
