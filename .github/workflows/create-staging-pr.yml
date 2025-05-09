@@ -45,9 +45,9 @@ jobs:
             
             gh pr comment $EXISTING_PR --body "新しい変更が dev ブランチにマージされました。
 
-この変更は元PR #${{ github.event.pull_request.number }} からのものです。
+          この変更は元PR #${{ github.event.pull_request.number }} からのものです。
 
-dev ブランチには新しい変更が含まれています。このPRをマージすると、これらの変更が staging に反映されます。"
+          dev ブランチには新しい変更が含まれています。このPRをマージすると、これらの変更が staging に反映されます。"
           else
             # 既存のPRがない場合、新しいPRを作成
             echo "既存のPRが見つかりませんでした。新しいPRを作成します。"
