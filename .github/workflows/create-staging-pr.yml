@@ -17,7 +17,8 @@ jobs:
         with:
           fetch-depth: 0  # すべての履歴を取得（ブランチの比較に必要）
 
-      - uses: ./.github/actions/create_pr.yaml
+      - uses: ./.github/actions/create_pr
+        id: create_pr
         with:
           base_branch: staging
           head_branch: dev
