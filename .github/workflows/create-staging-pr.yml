@@ -1,0 +1,26 @@
+name: Update Staging PR
+
+on:
+  pull_request:
+    types: [closed]
+    branches:
+      - dev
+
+jobs:
+  update-staging-pr:
+    # プルリクエストがマージされた場合のみ実行
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # すべての履歴を取得（ブランチの比較に必要）
+
+      - uses: ./.github/actions/create_pr
+        id: create_pr
+        with:
+          base_branch: staging
+          head_branch: dev
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_TITLE: "自動PR: dev から stagin へ更新"
