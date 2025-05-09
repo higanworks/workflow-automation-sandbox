@@ -11,6 +11,13 @@ inputs:
   GITHUB_TOKEN:
     description: 'GitHub token for authentication'
     required: true
+  pr_number:
+    description: 'PR number to update'
+    required: false
+    default: 'unknown'
+  PR_TITLE:
+    description: 'Title for the PR'
+    required: false
 
 runs:
   using: composite
@@ -47,7 +54,7 @@ runs:
           
           gh pr comment $EXISTING_PR --body "新しい変更が $HEAD_BRANCH ブランチにマージされました。
 
-        この変更は元PR #${{ github.event.pull_request.number }} からのものです。
+        この変更は元PR #${{ inputs.pr_number }} からのものです。
 
         $HEAD_BRANCH ブランチには新しい変更が含まれています。このPRをマージすると、これらの変更が $BASE_BRANCH に反映されます。"
         else
@@ -63,5 +70,5 @@ runs:
           ## 含まれる変更点
           このPRは最新の $HEAD_BRANCH ブランチの変更を $BASE_BRANCH に反映します。
 
-          マージ元PR: #${{ github.event.pull_request.number }}"
+          マージ元PR: #${{ inputs.pr_number }}"
         fi

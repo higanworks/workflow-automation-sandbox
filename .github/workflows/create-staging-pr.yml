@@ -1,45 +1,61 @@
 name: Update Staging PR
 
 on:
-  pull_request:
-    types: [closed]
-    branches:
-      - dev
+  workflow_run:
+    workflows:
+      - Deployment to dev
+    types:
+      - completed
 
 jobs:
-  check-deploy-status:
-    if: github.event.pull_request.merged == true
-    runs-on: ubuntu-latest
-    outputs:
-      deploy_success: ${{ steps.check-deploy.outputs.success }}
-    steps:
-      - name: Check deploy action status
-        id: check-deploy
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          # deploy_actionの最新の実行結果を確認
-          # ここでは特定のワークフロー名とブランチを指定
-          deploy_status=$(gh run list --workflow=deployment-dev.yml --branch dev --limit 1 --json conclusion --jq '.[0].conclusion')
-          
-          echo "最新のdeploy_actionの状態: $deploy_status"
-          
-          if [ "$deploy_status" = "success" ]; then
-            echo "success=true" >> $GITHUB_OUTPUT
-            echo "デプロイは成功しています。PRの作成/更新を進めます。"
-          else
-            echo "success=false" >> $GITHUB_OUTPUT
-            echo "デプロイは成功していません。PRの作成/更新をスキップします。"
-          fi
- 
   update-staging-pr:
     # デプロイが成功していた場合のみ実行
-    needs: check-deploy-status
-    if: needs.check-deploy-status.outputs.deploy_success == 'true'
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
-    outputs:
-      deploy_success: ${{ steps.check-deploy.outputs.success }}
     steps:
+      - name: Download PR number artifact
+        uses: actions/github-script@v7
+        id: download-artifact
+        with:
+          script: |
+            const artifacts = await github.rest.actions.listWorkflowRunArtifacts({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              run_id: ${{ github.event.workflow_run.id }}
+            });
+            
+            const prArtifact = artifacts.data.artifacts.find(
+              artifact => artifact.name === "pr_number"
+            );
+            
+            if (!prArtifact) {
+              console.log("PR number artifact not found");
+              return false;
+            }
+            
+            const download = await github.rest.actions.downloadArtifact({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              artifact_id: prArtifact.id,
+              archive_format: 'zip'
+            });
+            
+            const fs = require('fs');
+            fs.writeFileSync('pr_number.zip', Buffer.from(download.data));
+            
+            console.log("PR number artifact downloaded successfully");
+            return true;
+
+      - name: Extract PR number
+        id: extract-pr
+        if: steps.download-artifact.outputs.result == 'true'
+        run: |
+          unzip pr_number.zip
+          PR_NUMBER=$(cat pr_number)
+          echo "PR番号: $PR_NUMBER"
+          echo "pr_number=$PR_NUMBER" >> $GITHUB_OUTPUT
+          echo "found_pr=true" >> $GITHUB_OUTPUT
+
       - name: Checkout code
         uses: actions/checkout@v4
         with:
@@ -50,5 +66,6 @@ jobs:
         with:
           base_branch: staging
           head_branch: dev
+          pr_number: ${{ steps.extract-pr.outputs.pr_number }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_TITLE: "自動PR: dev から stagin へ更新"
+          PR_TITLE: "自動PR: dev から staging へ更新"
