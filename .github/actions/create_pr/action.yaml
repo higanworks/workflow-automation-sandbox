@@ -18,7 +18,6 @@ inputs:
   PR_TITLE:
     description: 'Title for the PR'
     required: false
-    default: '自動PR: ${{ inputs.head_branch }} から ${{ inputs.base_branch }} へ更新'
 
 runs:
   using: composite
