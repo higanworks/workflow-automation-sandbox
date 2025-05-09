@@ -13,32 +13,59 @@ jobs:
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     steps:
+      - name: Download PR number artifact
+        uses: actions/github-script@v7
+        id: download-artifact
+        with:
+          script: |
+            const artifacts = await github.rest.actions.listWorkflowRunArtifacts({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              run_id: ${{ github.event.workflow_run.id }}
+            });
+            
+            const prArtifact = artifacts.data.artifacts.find(
+              artifact => artifact.name === "pr_number"
+            );
+            
+            if (!prArtifact) {
+              console.log("PR number artifact not found");
+              return false;
+            }
+            
+            const download = await github.rest.actions.downloadArtifact({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              artifact_id: prArtifact.id,
+              archive_format: 'zip'
+            });
+            
+            const fs = require('fs');
+            fs.writeFileSync('pr_number.zip', Buffer.from(download.data));
+            
+            console.log("PR number artifact downloaded successfully");
+            return true;
+
+      - name: Extract PR number
+        id: extract-pr
+        if: steps.download-artifact.outputs.result == 'true'
+        run: |
+          unzip pr_number.zip
+          PR_NUMBER=$(cat pr_number)
+          echo "PR番号: $PR_NUMBER"
+          echo "pr_number=$PR_NUMBER" >> $GITHUB_OUTPUT
+          echo "found_pr=true" >> $GITHUB_OUTPUT
+
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0  # すべての履歴を取得（ブランチの比較に必要）
-
-      - name: Get PR information from deployment
-        id: pr-info
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          # 元のワークフローを起動したPRの情報を取得
-          PR_NUMBER=$(gh api /repos/${{ github.repository }}/actions/runs/${{ github.event.workflow_run.id }}/attempts/1 -q '.pull_requests[0].number')
-          
-          if [ -n "$PR_NUMBER" ]; then
-            echo "元のデプロイを起動したPR番号: $PR_NUMBER"
-            echo "pr_number=$PR_NUMBER" >> $GITHUB_OUTPUT
-          else
-            echo "PRの情報が見つかりません。直接プッシュなどの可能性があります。"
-            echo "pr_number=unknown" >> $GITHUB_OUTPUT
-          fi
 
       - uses: ./.github/actions/create_pr
         id: create_pr
         with:
           base_branch: staging
           head_branch: dev
-          pr_number: ${{ steps.pr-info.outputs.pr_number }}
+          pr_number: ${{ steps.extract-pr.outputs.pr_number }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_TITLE: "自動PR: dev から staging へ更新"
