@@ -1,0 +1,12 @@
+name: awesome_deployment
+description: "なんかすごいデプロイ"
+
+runs:
+  using: composite
+  steps:
+    - name: Deploy
+      shell: bash
+      run: |
+        echo "デプロイ中..."
+        # デプロイのコマンドをここに追加
+        # 例: ./deploy.sh
