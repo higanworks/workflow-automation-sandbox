@@ -4,8 +4,6 @@ on:
   workflow_run:
     workflows:
       - Deployment to dev
-    branches:
-      - dev
     types:
       - completed
 
