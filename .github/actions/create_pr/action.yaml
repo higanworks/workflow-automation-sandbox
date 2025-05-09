@@ -14,17 +14,14 @@ inputs:
 runs:
   using: composite
   steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0  # すべての履歴を取得（ブランチの比較に必要）
-
     - name: Set up Git
+      shell: bash
       run: |
         git config user.name "GitHub Actions Bot"
         git config user.email "actions@github.com"
 
     - name: Update or Create PR
+      shell: bash
       env:
         GITHUB_TOKEN: ${{ inputs.GITHUB_TOKEN }}
         BASE_BRANCH: ${{ inputs.base_branch }}
