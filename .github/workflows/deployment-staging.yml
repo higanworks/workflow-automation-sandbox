@@ -1,0 +1,19 @@
+name: Deployment to staging
+
+on:
+  pull_request:
+    branches:
+      - staging
+
+jobs:
+  deployment:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # すべての履歴を取得（ブランチの比較に必要）
+
+      - name: Awesome Deployment
+        uses: ./.github/actions/deployment
+        id: deployment
