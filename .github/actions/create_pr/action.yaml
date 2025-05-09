@@ -1,4 +1,5 @@
 name: create_or_update_pr
+description: "次のステージ用のPRを作成または更新します。"
 
 inputs:
   base_branch:
@@ -59,8 +60,8 @@ runs:
             --title "$PR_TITLE" \
             --body "$HEAD_BRANCH ブランチへのマージに伴い、自動的に $BASE_BRANCH ブランチへの PR を作成しました。
 
-            ## 含まれる変更点
-            このPRは最新の $HEAD_BRANCH ブランチの変更を $BASE_BRANCH に反映します。
+          ## 含まれる変更点
+          このPRは最新の $HEAD_BRANCH ブランチの変更を $BASE_BRANCH に反映します。
 
-            マージ元PR: #${{ github.event.pull_request.number }}"
+          マージ元PR: #${{ github.event.pull_request.number }}"
         fi

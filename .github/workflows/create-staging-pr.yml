@@ -7,10 +7,38 @@ on:
       - dev
 
 jobs:
-  update-staging-pr:
-    # プルリクエストがマージされた場合のみ実行
+  check-deploy-status:
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
+    outputs:
+      deploy_success: ${{ steps.check-deploy.outputs.success }}
+    steps:
+      - name: Check deploy action status
+        id: check-deploy
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # deploy_actionの最新の実行結果を確認
+          # ここでは特定のワークフロー名とブランチを指定
+          deploy_status=$(gh run list --workflow=deployment-dev.yml --branch dev --limit 1 --json conclusion --jq '.[0].conclusion')
+          
+          echo "最新のdeploy_actionの状態: $deploy_status"
+          
+          if [ "$deploy_status" = "success" ]; then
+            echo "success=true" >> $GITHUB_OUTPUT
+            echo "デプロイは成功しています。PRの作成/更新を進めます。"
+          else
+            echo "success=false" >> $GITHUB_OUTPUT
+            echo "デプロイは成功していません。PRの作成/更新をスキップします。"
+          fi
+ 
+  update-staging-pr:
+    # デプロイが成功していた場合のみ実行
+    needs: check-deploy-status
+    if: needs.check-deploy-status.outputs.deploy_success == 'true'
+    runs-on: ubuntu-latest
+    outputs:
+      deploy_success: ${{ steps.check-deploy.outputs.success }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
