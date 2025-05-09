@@ -21,7 +21,7 @@ jobs:
       - name: Get PR information from deployment
         id: pr-info
         env:
-          GITHUB_TOKEN: ${{ inputs.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           # 元のワークフローを起動したPRの情報を取得
           PR_NUMBER=$(gh api /repos/${{ github.repository }}/actions/runs/${{ github.event.workflow_run.id }}/attempts/latest -q '.pull_requests[0].number')
